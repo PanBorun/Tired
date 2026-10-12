@@ -13,4 +13,7 @@ interface ChatRepository {
         includeTodayUsage: Boolean
     ): Result<Unit>
     suspend fun clearHistory()
+    fun observeUserProfile(): Flow<com.tired.app.domain.model.UserDigitalProfile>
+    suspend fun getUserProfile(): com.tired.app.domain.model.UserDigitalProfile
+    suspend fun updateUserProfile(profile: com.tired.app.domain.model.UserDigitalProfile)
 }

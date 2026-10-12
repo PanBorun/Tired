@@ -204,7 +204,7 @@ fun AIAssistantScreen(
             ) {
                 if (uiState.messages.isEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    IntroCard()
+                    IntroCard(userProfile = uiState.userProfile)
                     PromptGuide(
                         prompts = uiState.suggestedPrompts,
                         onPromptClick = viewModel::sendPrompt
@@ -431,7 +431,7 @@ private fun ConversationListItem(
 }
 
 @Composable
-private fun IntroCard() {
+private fun IntroCard(userProfile: com.tired.app.domain.model.UserDigitalProfile) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -441,18 +441,48 @@ private fun IntroCard() {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(22.dp)) {
-            Text(
-                text = "Your private reflection space",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.SmartToy,
+                    contentDescription = null,
+                    tint = Peach500,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Your private reflection space",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Ask for patterns, recovery ideas, or a calmer evening plan. When device context is available, I will use it automatically.",
+                text = "An empathetic space for digital fatigue recovery. No textbook preaching, just real recovery.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.88f)
             )
+            Spacer(modifier = Modifier.height(14.dp))
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.12f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "🧠 Active Memory Profile (长期画像记忆)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Peach500
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "• 高危时段: ${userProfile.dangerTimeRange}\n• 易耗竭类型: ${userProfile.triggerAppHabits}\n• 回血偏好: ${userProfile.reliefPreferences}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.90f)
+                    )
+                }
+            }
         }
     }
 }

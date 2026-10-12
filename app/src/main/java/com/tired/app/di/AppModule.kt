@@ -78,7 +78,11 @@ object AppModule {
             TiredDatabase::class.java,
             "tired_database"
         )
-            .addMigrations(TiredDatabase.MIGRATION_1_2, TiredDatabase.MIGRATION_2_3)
+            .addMigrations(
+                TiredDatabase.MIGRATION_1_2,
+                TiredDatabase.MIGRATION_2_3,
+                TiredDatabase.MIGRATION_3_4
+            )
             .build()
     }
 
@@ -92,6 +96,12 @@ object AppModule {
     @Singleton
     fun provideChatMessageDao(database: TiredDatabase): ChatMessageDao {
         return database.chatMessageDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserProfileDao(database: TiredDatabase): com.tired.app.data.local.dao.UserProfileDao {
+        return database.userProfileDao()
     }
 
     @Provides
@@ -134,10 +144,11 @@ object AppModule {
     @Singleton
     fun provideChatRepository(
         chatMessageDao: ChatMessageDao,
+        userProfileDao: com.tired.app.data.local.dao.UserProfileDao,
         usageRepository: UsageRepository,
         qwenChatService: QwenChatService
     ): ChatRepository {
-        return ChatRepositoryImpl(chatMessageDao, usageRepository, qwenChatService)
+        return ChatRepositoryImpl(chatMessageDao, userProfileDao, usageRepository, qwenChatService)
     }
 
     @Provides

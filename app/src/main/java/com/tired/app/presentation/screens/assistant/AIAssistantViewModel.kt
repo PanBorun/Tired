@@ -23,10 +23,10 @@ import java.util.UUID
 import javax.inject.Inject
 
 private val DEFAULT_PROMPTS = listOf(
-    "Based on today's usage, what should I adjust first?",
-    "Why was I classified into this fatigue pattern?",
-    "Give me a realistic 30-minute wind-down plan for tonight.",
-    "Which apps affected my state the most today?"
+    "我刷手机刷得头晕，停不下来，救救我",
+    "明明只是在玩手机放松，为什么感觉这么累？",
+    "根据我的画像，今晚给一个30分钟软着陆方案",
+    "Which apps drained my energy the most today?"
 )
 
 data class AIAssistantUiState(
@@ -38,6 +38,7 @@ data class AIAssistantUiState(
     val context: ChatRequestContext = ChatRequestContext(
         note = "Today's device activity is unavailable, so replies will use general wellness guidance."
     ),
+    val userProfile: com.tired.app.domain.model.UserDigitalProfile = com.tired.app.domain.model.UserDigitalProfile(),
     val errorMessage: String? = null,
     val suggestedPrompts: List<String> = DEFAULT_PROMPTS
 )
@@ -59,7 +60,16 @@ class AIAssistantViewModel @Inject constructor(
     init {
         observeConversations()
         observeMessages()
+        observeUserProfile()
         refreshContext()
+    }
+
+    private fun observeUserProfile() {
+        viewModelScope.launch {
+            chatRepository.observeUserProfile().collect { profile ->
+                _uiState.update { it.copy(userProfile = profile) }
+            }
+        }
     }
 
     fun updateInput(input: String) {
@@ -174,6 +184,7 @@ class AIAssistantViewModel @Inject constructor(
     }
 
     private suspend fun resolveContext(): ChatRequestContext {
+        val profile = chatRepository.getUserProfile()
         return when (val result = usageRepository.loadDailyFatigueData(today())) {
             is UsageDataResult.Success -> {
                 val summary = buildString {
@@ -187,7 +198,8 @@ class AIAssistantViewModel @Inject constructor(
                     note = when (result.origin) {
                         UsageDataOrigin.REAL_DEVICE -> "Replies will use today's real device activity."
                     },
-                    usesUsageContext = true
+                    usesUsageContext = true,
+                    userProfile = profile
                 )
             }
 
@@ -195,7 +207,8 @@ class AIAssistantViewModel @Inject constructor(
             UsageDataResult.EmptyData -> {
                 ChatRequestContext(
                     note = "Today's device activity is unavailable, so replies will use general wellness guidance.",
-                    usesUsageContext = false
+                    usesUsageContext = false,
+                    userProfile = profile
                 )
             }
         }

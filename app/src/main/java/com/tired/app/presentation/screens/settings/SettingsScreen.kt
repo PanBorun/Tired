@@ -36,6 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +58,19 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    if (showEditProfileDialog) {
+        EditProfileDialog(
+            initialProfile = userProfile,
+            onDismiss = { showEditProfileDialog = false },
+            onSave = { updated ->
+                viewModel.updateUserProfile(updated)
+                showEditProfileDialog = false
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -85,6 +99,44 @@ fun SettingsScreen(
                 SettingsHeroCard()
 
                 Spacer(modifier = Modifier.height(18.dp))
+
+                SettingsSectionCard(
+                    icon = Icons.Default.SmartToy,
+                    title = "AI Memory Profile"
+                ) {
+                    Text(
+                        text = "长期画像记忆 (Long-term Memory)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Ink700
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "AI 会牢记这些核心特征，并在每次对话与建议中量身定制，拒绝大话套话。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Ink500
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    ProfileItemRow("⚠️ 高危时段", userProfile.dangerTimeRange)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ProfileItemRow("📱 易耗竭习惯", userProfile.triggerAppHabits)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ProfileItemRow("🎧 回血偏好", userProfile.reliefPreferences)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ProfileItemRow("💼 身份与场景", userProfile.contextBio)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { showEditProfileDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("编辑我的数字健康画像")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsSectionCard(
                     icon = Icons.Default.Notifications,
@@ -323,4 +375,99 @@ private fun SettingsToggleRow(
             onCheckedChange = onCheckedChange
         )
     }
+}
+
+@Composable
+private fun ProfileItemRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Ink700
+        )
+    }
+}
+
+@Composable
+private fun EditProfileDialog(
+    initialProfile: com.tired.app.domain.model.UserDigitalProfile,
+    onDismiss: () -> Unit,
+    onSave: (com.tired.app.domain.model.UserDigitalProfile) -> Unit
+) {
+    var dangerTime by remember { mutableStateOf(initialProfile.dangerTimeRange) }
+    var triggerHabits by remember { mutableStateOf(initialProfile.triggerAppHabits) }
+    var reliefPref by remember { mutableStateOf(initialProfile.reliefPreferences) }
+    var contextBio by remember { mutableStateOf(initialProfile.contextBio) }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "编辑 AI 记忆画像",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = dangerTime,
+                    onValueChange = { dangerTime = it },
+                    label = { Text("易疲惫/高危时段") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = triggerHabits,
+                    onValueChange = { triggerHabits = it },
+                    label = { Text("易耗竭习惯 (如短视频)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = reliefPref,
+                    onValueChange = { reliefPref = it },
+                    label = { Text("回血偏好 (如白噪音、拒绝说教)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = contextBio,
+                    onValueChange = { contextBio = it },
+                    label = { Text("生活场景 (如高脑力消耗)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.Button(
+                onClick = {
+                    onSave(
+                        initialProfile.copy(
+                            dangerTimeRange = dangerTime.trim(),
+                            triggerAppHabits = triggerHabits.trim(),
+                            reliefPreferences = reliefPref.trim(),
+                            contextBio = contextBio.trim()
+                        )
+                    )
+                }
+            ) {
+                Text("保存画像")
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

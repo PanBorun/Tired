@@ -166,8 +166,17 @@ data class ChatConversationSummary(
     val updatedAt: Long
 )
 
+data class UserDigitalProfile(
+    val dangerTimeRange: String = "23:00 - 01:30",
+    val triggerAppHabits: String = "短视频、社交平台信息流",
+    val reliefPreferences: String = "偏好白噪音/轻音乐，讨厌大道理说教，温和同理心",
+    val contextBio: String = "白天高强度脑力消耗，晚上下班后容易通过手机报复性放松"
+)
+
 data class ChatRequestContext(
     val summary: String = "",
     val note: String = "",
-    val usesUsageContext: Boolean = false
+    val usesUsageContext: Boolean = false,
+    val userProfile: UserDigitalProfile? = null
 )
+

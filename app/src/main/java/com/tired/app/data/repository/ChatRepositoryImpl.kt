@@ -2,7 +2,9 @@ package com.tired.app.data.repository
 
 import com.tired.app.data.local.dao.ChatMessageDao
 import com.tired.app.data.local.dao.ChatConversationRow
+import com.tired.app.data.local.dao.UserProfileDao
 import com.tired.app.data.local.entity.ChatMessageEntity
+import com.tired.app.data.local.entity.UserProfileEntity
 import com.tired.app.data.remote.datasource.QwenChatService
 import com.tired.app.data.remote.model.ChatMessage
 import com.tired.app.domain.model.ChatConversationSummary
@@ -10,6 +12,7 @@ import com.tired.app.domain.model.ChatRequestContext
 import com.tired.app.domain.model.ChatSender
 import com.tired.app.domain.model.ChatUiMessage
 import com.tired.app.domain.model.DailyFatigueData
+import com.tired.app.domain.model.UserDigitalProfile
 import com.tired.app.domain.repository.ChatRepository
 import com.tired.app.domain.repository.UsageDataOrigin
 import com.tired.app.domain.repository.UsageDataResult
@@ -24,6 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
     private val chatMessageDao: ChatMessageDao,
+    private val userProfileDao: UserProfileDao,
     private val usageRepository: UsageRepository,
     private val qwenChatService: QwenChatService
 ) : ChatRepository {
@@ -61,7 +65,12 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         val sessionDate = today()
-        val context = if (includeTodayUsage) loadTodayContext() else ChatRequestContext()
+        val profile = getUserProfile()
+        val context = if (includeTodayUsage) {
+            loadTodayContext().copy(userProfile = profile)
+        } else {
+            ChatRequestContext(userProfile = profile)
+        }
 
         chatMessageDao.insert(
             ChatMessageEntity(
@@ -98,6 +107,24 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun clearHistory() {
         chatMessageDao.clearAll()
+    }
+
+    override fun observeUserProfile(): Flow<UserDigitalProfile> {
+        return userProfileDao.observeProfile().map { entity ->
+            entity?.toDomain() ?: UserDigitalProfile()
+        }
+    }
+
+    override suspend fun getUserProfile(): UserDigitalProfile {
+        return userProfileDao.getProfile()?.toDomain() ?: run {
+            val defaultEntity = UserProfileEntity()
+            userProfileDao.insertOrUpdate(defaultEntity)
+            defaultEntity.toDomain()
+        }
+    }
+
+    override suspend fun updateUserProfile(profile: UserDigitalProfile) {
+        userProfileDao.insertOrUpdate(UserProfileEntity.fromDomain(profile))
     }
 
     private suspend fun loadTodayContext(): ChatRequestContext {
