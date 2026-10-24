@@ -79,6 +79,9 @@ interface ChatMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: ChatMessageEntity): Long
 
+    @Query("SELECT * FROM chat_messages WHERE sessionDate = :date AND role = 'user' ORDER BY createdAt ASC")
+    suspend fun getUserMessagesByDate(date: String): List<ChatMessageEntity>
+
     @Query("DELETE FROM chat_messages")
     suspend fun clearAll()
 }

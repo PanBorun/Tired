@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.tired.app.domain.model.UserSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,6 +23,17 @@ class SettingsDataSource @Inject constructor(
         val REMINDER_HOUR = intPreferencesKey("reminder_hour")
         val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
         val DAILY_GOAL = intPreferencesKey("daily_goal")
+        val LAST_CONSOLIDATED_DATE = stringPreferencesKey("last_consolidated_date")
+    }
+
+    suspend fun getLastConsolidatedDate(): String? {
+        return context.settingsDataStore.data.map { it[Keys.LAST_CONSOLIDATED_DATE] }.firstOrNull()
+    }
+
+    suspend fun saveLastConsolidatedDate(date: String) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[Keys.LAST_CONSOLIDATED_DATE] = date
+        }
     }
 
     fun observeSettings(): Flow<UserSettings> {

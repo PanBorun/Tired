@@ -10,3 +10,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+server/data/
+server/.venv/
+__pycache__/
+*.pyc

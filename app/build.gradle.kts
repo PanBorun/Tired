@@ -19,13 +19,18 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "BAILIAN_API_KEY", "\"sk-30fb84f235bc45549fd6c8c563dbd22b\"")
+        buildConfigField(
+            "String",
+            "BAILIAN_API_KEY",
+            "\"sk-ws-H.PMHHPRM.6lTS.MEUCIBG7FCNn50Ln5PgHsrTQbivT8chYXcFO1uB1bHgmPaDIAiEA0nwV-yYrYQYZlurmpkoVPOW6QbP_Iaud54k5VQSN4bA\""
+        )
         buildConfigField(
             "String",
             "BAILIAN_CHAT_URL",
-            "\"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions\""
+            "\"https://ws-1zaff7zj8fap0ph2.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions\""
         )
         buildConfigField("String", "BAILIAN_MODEL", "\"qwen-plus\"")
+        buildConfigField("String", "BACKEND_BASE_URL", "\"http://10.0.2.2:8000\"")
     }
 
     buildTypes {

@@ -2,6 +2,8 @@ package com.tired.app.data.remote.datasource
 
 import com.tired.app.BuildConfig
 import com.tired.app.data.remote.api.LLMApiService
+import com.tired.app.data.remote.model.BackendChatRequest
+import com.tired.app.data.remote.model.BackendUserProfile
 import com.tired.app.data.remote.model.ChatCompletionRequest
 import com.tired.app.data.remote.model.ChatMessage
 import com.tired.app.domain.model.ChatRequestContext
@@ -37,6 +39,31 @@ class QwenChatService @Inject constructor(
         history: List<ChatMessage>,
         context: ChatRequestContext
     ): String {
+        // 1. 优先尝试请求本地 Python 后端 (携带端侧核心画像)
+        try {
+            val backendUrl = "${BuildConfig.BACKEND_BASE_URL}/api/chat"
+            val backendReq = BackendChatRequest(
+                messages = history,
+                deviceSummary = if (context.usesUsageContext) context.summary else "",
+                userProfile = context.userProfile?.let {
+                    BackendUserProfile(
+                        dangerTimeRange = it.dangerTimeRange,
+                        triggerAppHabits = it.triggerAppHabits,
+                        reliefPreferences = it.reliefPreferences,
+                        contextBio = it.contextBio
+                    )
+                }
+            )
+            val backendResp = apiService.backendChat(backendUrl, backendReq)
+            if (backendResp.content.isNotBlank()) {
+                android.util.Log.i("QwenChatService", "Chat response received from local Backend")
+                return backendResp.content
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("QwenChatService", "Local backend not connected (${e.message}), gracefully falling back to direct Bailian API")
+        }
+
+        // 2. 降级方案：直接调用云端百炼 API
         val messages = buildList {
             add(ChatMessage(role = "system", content = buildChatSystemPrompt(context)))
             addAll(history)

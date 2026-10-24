@@ -27,3 +27,26 @@ data class ChatCompletionResponse(
 data class Choice(
     val message: ChatMessage
 )
+
+@Serializable
+data class BackendChatRequest(
+    val messages: List<ChatMessage>,
+    @SerialName("device_summary")
+    val deviceSummary: String = "",
+    @SerialName("user_profile")
+    val userProfile: BackendUserProfile? = null
+)
+
+@Serializable
+data class BackendUserProfile(
+    val dangerTimeRange: String = "",
+    val triggerAppHabits: String = "",
+    val reliefPreferences: String = "",
+    val contextBio: String = ""
+)
+
+@Serializable
+data class BackendChatResponse(
+    val content: String
+)
+
