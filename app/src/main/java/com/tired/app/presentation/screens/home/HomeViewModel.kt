@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.tired.app.data.remote.model.BackendAntiFatiguePlan
+import com.tired.app.domain.repository.ChatRepository
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -31,6 +33,7 @@ data class HomeUiState(
     val topApps: List<AppUsageInfo> = emptyList(),
     val isFromAI: Boolean = false,
     val analysisRefreshHint: String = "",
+    val activePlan: BackendAntiFatiguePlan? = null,
     val error: String? = null
 )
 
@@ -39,7 +42,8 @@ class HomeViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val analysisRepository: AnalysisRepository,
     private val localRuleEngine: LocalRuleEngine,
-    private val qwenAnalyzer: QwenAnalyzer
+    private val qwenAnalyzer: QwenAnalyzer,
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -79,6 +83,8 @@ class HomeViewModel @Inject constructor(
                             analyzeWithFallback(dailyData)
                         }
 
+                        val activePlan = chatRepository.getAntiFatiguePlan().getOrNull()
+
                         _uiState.value = HomeUiState(
                             screenState = UsageScreenState.CONTENT,
                             dataOrigin = dailyResult.origin,
@@ -90,7 +96,8 @@ class HomeViewModel @Inject constructor(
                             totalLaunchCount = dailyData.totalLaunchCount,
                             topApps = dailyData.appUsageList.take(5),
                             isFromAI = result.isFromAI,
-                            analysisRefreshHint = buildAnalysisRefreshHint(result)
+                            analysisRefreshHint = buildAnalysisRefreshHint(result),
+                            activePlan = activePlan
                         )
                     }
                 }

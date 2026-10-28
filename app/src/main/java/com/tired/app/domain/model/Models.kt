@@ -177,6 +177,7 @@ data class ChatRequestContext(
     val summary: String = "",
     val note: String = "",
     val usesUsageContext: Boolean = false,
-    val userProfile: UserDigitalProfile? = null
+    val userProfile: UserDigitalProfile? = null,
+    val weeklyUsageList: List<DailyFatigueData> = emptyList()
 )
 

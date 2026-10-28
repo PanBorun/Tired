@@ -55,6 +55,10 @@ import com.tired.app.presentation.theme.Blush50
 import com.tired.app.presentation.theme.CardWhite
 import com.tired.app.presentation.theme.Coral500
 import com.tired.app.presentation.theme.Ink500
+import com.tired.app.data.remote.model.BackendAntiFatiguePlan
+import com.tired.app.presentation.theme.Ink700
+import com.tired.app.presentation.theme.Ink900
+import com.tired.app.presentation.theme.Sand50
 import com.tired.app.presentation.theme.Peach500
 import com.tired.app.presentation.theme.Teal500
 import com.tired.app.presentation.theme.categoryColor
@@ -300,6 +304,9 @@ private fun ContentStateContent(
             )
         }
 
+        Spacer(modifier = Modifier.height(18.dp))
+        ActivePlanSection(plan = uiState.activePlan)
+
         if (uiState.summary.isNotEmpty()) {
             Spacer(modifier = Modifier.height(18.dp))
             AnalysisHintCard(message = uiState.analysisRefreshHint)
@@ -526,4 +533,152 @@ private fun openUsageAccessSettings(context: Context) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)
+}
+
+@Composable
+private fun ActivePlanSection(plan: BackendAntiFatiguePlan?) {
+    if (plan != null) {
+        val actionDesc = when (plan.recoveryActionType) {
+            "WHITE_NOISE_RAIN" -> "🌧️ 雨声白噪音"
+            "BREATHING_EXERCISE" -> "🌬️ 4-7-8 腹式呼吸"
+            "MICRO_STRETCH" -> "🧘 微动作闭目伸展"
+            "SCREEN_OFF_REST" -> "📱 手机倒扣闭目休息"
+            else -> plan.recoveryActionType
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = CardWhite),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(Teal500.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "🛡️ 当前防疲劳策略",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Teal500,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .background(Peach500.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "✓ 已同步端侧",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Peach500,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = plan.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Ink900
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("重点监控时段", style = MaterialTheme.typography.labelSmall, color = Ink500)
+                        Text(plan.targetTimeWindow, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = Ink700)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("连续使用阈值", style = MaterialTheme.typography.labelSmall, color = Ink500)
+                        Text("每 ${plan.maxContinuousMinutes} 分钟", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = Ink700)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Sand50, RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "温和提醒语：",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Ink500
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "\"${plan.promptMessage}\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Ink900,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "软着陆动作：$actionDesc (${plan.actionDurationMinutes}分钟)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Teal500,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                if (plan.microTips.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "落地贴士：${plan.microTips.joinToString(" • ")}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Ink500
+                    )
+                }
+            }
+        }
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = CardWhite),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "💡", style = MaterialTheme.typography.headlineMedium)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "定制专属防疲劳方案",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Ink900
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "前往 AI 对话告知你的作息与高危时段，AI 将为你生成端侧守护方案。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Ink500
+                    )
+                }
+            }
+        }
+    }
 }

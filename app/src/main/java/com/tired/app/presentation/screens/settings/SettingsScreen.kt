@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,24 +16,36 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,10 +60,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tired.app.data.remote.model.BackendTraitItem
 import com.tired.app.presentation.theme.CardWhite
+import com.tired.app.presentation.theme.FatigueOrange
+import com.tired.app.presentation.theme.Ink300
 import com.tired.app.presentation.theme.Ink500
 import com.tired.app.presentation.theme.Ink700
+import com.tired.app.presentation.theme.Ink900
 import com.tired.app.presentation.theme.Peach500
+import com.tired.app.presentation.theme.Sand50
 import com.tired.app.presentation.theme.Teal500
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,16 +77,16 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
-    var showEditProfileDialog by remember { mutableStateOf(false) }
+    val traits by viewModel.traits.collectAsStateWithLifecycle()
+    val isLoadingTraits by viewModel.isLoadingTraits.collectAsStateWithLifecycle()
+    var showAddTraitDialog by remember { mutableStateOf(false) }
 
-    if (showEditProfileDialog) {
-        EditProfileDialog(
-            initialProfile = userProfile,
-            onDismiss = { showEditProfileDialog = false },
-            onSave = { updated ->
-                viewModel.updateUserProfile(updated)
-                showEditProfileDialog = false
+    if (showAddTraitDialog) {
+        AddTraitDialog(
+            onDismiss = { showAddTraitDialog = false },
+            onConfirm = { category, content, status ->
+                viewModel.addTrait(category, content, status)
+                showAddTraitDialog = false
             }
         )
     }
@@ -100,39 +119,68 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                // 阶段 2：自演化长期画像记忆卡片
                 SettingsSectionCard(
                     icon = Icons.Default.SmartToy,
                     title = "AI Memory Profile"
                 ) {
-                    Text(
-                        text = "长期画像记忆 (Long-term Memory)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Ink700
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "AI 会牢记这些核心特征，并在每次对话与建议中量身定制，拒绝大话套话。",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Ink500
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "自演化长期画像记忆",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Ink700
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "AI 在日常对话中自动提炼感知与求证（如换夜班），并以此作为定制策略的核心依据。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Ink500
+                            )
+                        }
+                        IconButton(onClick = { viewModel.loadTraits() }) {
+                            if (isLoadingTraits) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Refresh, contentDescription = "刷新记忆", tint = Ink500)
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    ProfileItemRow("⚠️ 高危时段", userProfile.dangerTimeRange)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ProfileItemRow("📱 易耗竭习惯", userProfile.triggerAppHabits)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ProfileItemRow("🎧 回血偏好", userProfile.reliefPreferences)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ProfileItemRow("💼 身份与场景", userProfile.contextBio)
+                    if (traits.isEmpty()) {
+                        Text(
+                            text = "暂无画像特征记录。与 AI 正常对话，它会自动发现并记录你的习惯与生活动态。",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Ink300,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    } else {
+                        traits.forEach { trait ->
+                            TraitCardItem(
+                                trait = trait,
+                                onDelete = { viewModel.deleteTrait(trait.id) }
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = { showEditProfileDialog = true },
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = { showAddTraitDialog = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("编辑我的数字健康画像")
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("手动记录或修正画像特征")
                     }
                 }
 
@@ -213,13 +261,13 @@ fun SettingsScreen(
                     title = "About"
                 ) {
                     Text(
-                        text = "Tired? v1.0.0",
+                        text = "Tired? v2.1.0",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "A fatigue-tracking and energy-management app built around real phone behavior.",
+                        text = "A fatigue-tracking and energy-management app built around real phone behavior and Tool-Calling Agent.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Ink500
                     )
@@ -235,6 +283,222 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun TraitCardItem(
+    trait: BackendTraitItem,
+    onDelete: () -> Unit
+) {
+    val categoryName = when (trait.category) {
+        "WORK_SCHEDULE" -> "作息节奏 ⏰"
+        "TRIGGER_HABIT" -> "失控诱因 📱"
+        "SYMPTOM" -> "身心反应 ⚡"
+        "RELIEF_PREF" -> "安抚偏好 🎧"
+        "LIFE_CONTEXT" -> "生活背景 💼"
+        else -> trait.category
+    }
+
+    val isPending = trait.status == "PENDING_CONFIRM"
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Sand50),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 类别标签
+                    Box(
+                        modifier = Modifier
+                            .background(Peach500.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = categoryName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Peach500,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    // 生命周期状态标签 (PENDING_CONFIRM vs ACTIVE)
+                    if (isPending) {
+                        Box(
+                            modifier = Modifier
+                                .background(FatigueOrange.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "⚠️ 待跟进求证",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = FatigueOrange,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .background(Teal500.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "✓ 已生效基准",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Teal500,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "删除特征",
+                        tint = Ink300,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = trait.content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Ink900,
+                fontWeight = FontWeight.Medium
+            )
+
+            if (trait.sourceDate.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "记录日期: ${trait.sourceDate}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Ink500
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun AddTraitDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (category: String, content: String, status: String) -> Unit
+) {
+    val categories = listOf(
+        "WORK_SCHEDULE" to "作息节奏",
+        "TRIGGER_HABIT" to "失控诱因",
+        "RELIEF_PREF" to "安抚偏好",
+        "SYMPTOM" to "身心反应",
+        "LIFE_CONTEXT" to "生活背景"
+    )
+
+    var selectedCategory by remember { mutableStateOf("WORK_SCHEDULE") }
+    var content by remember { mutableStateOf("") }
+    var isPending by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "新增/修正画像特征",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "选择特征分类：",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Ink700
+                )
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    categories.forEach { (catKey, catLabel) ->
+                        FilterChip(
+                            selected = selectedCategory == catKey,
+                            onClick = { selectedCategory = catKey },
+                            label = { Text(catLabel) }
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = { content = it },
+                    label = { Text("特征具体内容 (如：新换了工作需要倒夜班)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "标记为近期待跟进求证",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "开启后，AI 下次制定方案前会先向你主动确认该状态是否还在持续",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Ink500
+                        )
+                    }
+                    Switch(
+                        checked = isPending,
+                        onCheckedChange = { isPending = it }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (content.isNotBlank()) {
+                        val status = if (isPending) "PENDING_CONFIRM" else "ACTIVE"
+                        onConfirm(selectedCategory, content.trim(), status)
+                    }
+                },
+                enabled = content.isNotBlank()
+            ) {
+                Text("保存至后端记忆")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable
@@ -282,18 +546,17 @@ private fun SettingsHeroCard() {
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(0.dp))
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = "Qwen AI is built in",
+                text = "Tool-Calling Agent Active",
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Open the AI Chat tab anytime. It can use today’s device activity automatically, so there’s no API key setup left to do.",
+                text = "The AI now autonomously queries your hardware screen stats and evolves its long-term memory of your habits & lifestyle.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.88f)
             )
@@ -375,99 +638,4 @@ private fun SettingsToggleRow(
             onCheckedChange = onCheckedChange
         )
     }
-}
-
-@Composable
-private fun ProfileItemRow(label: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Ink700
-        )
-    }
-}
-
-@Composable
-private fun EditProfileDialog(
-    initialProfile: com.tired.app.domain.model.UserDigitalProfile,
-    onDismiss: () -> Unit,
-    onSave: (com.tired.app.domain.model.UserDigitalProfile) -> Unit
-) {
-    var dangerTime by remember { mutableStateOf(initialProfile.dangerTimeRange) }
-    var triggerHabits by remember { mutableStateOf(initialProfile.triggerAppHabits) }
-    var reliefPref by remember { mutableStateOf(initialProfile.reliefPreferences) }
-    var contextBio by remember { mutableStateOf(initialProfile.contextBio) }
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "编辑 AI 记忆画像",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                androidx.compose.material3.OutlinedTextField(
-                    value = dangerTime,
-                    onValueChange = { dangerTime = it },
-                    label = { Text("易疲惫/高危时段") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = triggerHabits,
-                    onValueChange = { triggerHabits = it },
-                    label = { Text("易耗竭习惯 (如短视频)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = reliefPref,
-                    onValueChange = { reliefPref = it },
-                    label = { Text("回血偏好 (如白噪音、拒绝说教)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = contextBio,
-                    onValueChange = { contextBio = it },
-                    label = { Text("生活场景 (如高脑力消耗)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            androidx.compose.material3.Button(
-                onClick = {
-                    onSave(
-                        initialProfile.copy(
-                            dangerTimeRange = dangerTime.trim(),
-                            triggerAppHabits = triggerHabits.trim(),
-                            reliefPreferences = reliefPref.trim(),
-                            contextBio = contextBio.trim()
-                        )
-                    )
-                }
-            ) {
-                Text("保存画像")
-            }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
 }

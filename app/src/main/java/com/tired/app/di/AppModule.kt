@@ -146,9 +146,10 @@ object AppModule {
         chatMessageDao: ChatMessageDao,
         userProfileDao: com.tired.app.data.local.dao.UserProfileDao,
         usageRepository: UsageRepository,
-        qwenChatService: QwenChatService
+        qwenChatService: QwenChatService,
+        apiService: LLMApiService
     ): ChatRepository {
-        return ChatRepositoryImpl(chatMessageDao, userProfileDao, usageRepository, qwenChatService)
+        return ChatRepositoryImpl(chatMessageDao, userProfileDao, usageRepository, qwenChatService, apiService)
     }
 
     @Provides

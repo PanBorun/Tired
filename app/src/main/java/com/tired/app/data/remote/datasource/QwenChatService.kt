@@ -42,9 +42,30 @@ class QwenChatService @Inject constructor(
         // 1. 优先尝试请求本地 Python 后端 (携带端侧核心画像)
         try {
             val backendUrl = "${BuildConfig.BACKEND_BASE_URL}/api/chat"
+            val historyPool = if (context.usesUsageContext) {
+                context.weeklyUsageList.mapIndexed { index, day ->
+                    com.tired.app.data.remote.model.BackendDailyStats(
+                        date = day.date,
+                        daysAgo = index,
+                        totalScreenTimeMinutes = day.totalScreenTimeMinutes,
+                        lateNightMinutes = day.lateNightMinutes,
+                        launchCount = day.totalLaunchCount,
+                        topApps = day.appUsageList.take(5).map { app ->
+                            com.tired.app.data.remote.model.BackendTopApp(
+                                appName = app.appName,
+                                durationMinutes = app.totalTimeMinutes,
+                                category = app.category.displayName
+                            )
+                        }
+                    )
+                }
+            } else {
+                emptyList()
+            }
+
             val backendReq = BackendChatRequest(
                 messages = history,
-                deviceSummary = if (context.usesUsageContext) context.summary else "",
+                deviceHistoryPool = historyPool,
                 userProfile = context.userProfile?.let {
                     BackendUserProfile(
                         dangerTimeRange = it.dangerTimeRange,

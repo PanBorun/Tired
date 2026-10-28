@@ -12,3 +12,9 @@ BAILIAN_BASE_URL = os.getenv(
 )
 
 CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen-plus")
+
+# 数据库存储路径
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "tired_agent.db")

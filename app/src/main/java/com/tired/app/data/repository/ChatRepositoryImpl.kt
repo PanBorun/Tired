@@ -17,6 +17,11 @@ import com.tired.app.domain.repository.ChatRepository
 import com.tired.app.domain.repository.UsageDataOrigin
 import com.tired.app.domain.repository.UsageDataResult
 import com.tired.app.domain.repository.UsageRepository
+import com.tired.app.BuildConfig
+import com.tired.app.data.remote.api.LLMApiService
+import com.tired.app.data.remote.model.BackendAntiFatiguePlan
+import com.tired.app.data.remote.model.BackendTraitItem
+import com.tired.app.data.remote.model.BackendTraitMutationRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -29,7 +34,8 @@ class ChatRepositoryImpl @Inject constructor(
     private val chatMessageDao: ChatMessageDao,
     private val userProfileDao: UserProfileDao,
     private val usageRepository: UsageRepository,
-    private val qwenChatService: QwenChatService
+    private val qwenChatService: QwenChatService,
+    private val apiService: LLMApiService
 ) : ChatRepository {
 
     override fun observeMessages(conversationId: String): Flow<List<ChatUiMessage>> {
@@ -127,16 +133,77 @@ class ChatRepositoryImpl @Inject constructor(
         userProfileDao.insertOrUpdate(UserProfileEntity.fromDomain(profile))
     }
 
+    override suspend fun getProfileTraits(): Result<List<BackendTraitItem>> = runCatching {
+        val url = "${BuildConfig.BACKEND_BASE_URL}/api/profile/traits"
+        apiService.getProfileTraits(url).traits
+    }
+
+    override suspend fun addProfileTrait(
+        category: String,
+        content: String,
+        status: String
+    ): Result<BackendTraitItem> = runCatching {
+        val url = "${BuildConfig.BACKEND_BASE_URL}/api/profile/traits"
+        val resp = apiService.addProfileTrait(
+            url = url,
+            request = BackendTraitMutationRequest(
+                category = category,
+                content = content,
+                status = status
+            )
+        )
+        resp.trait ?: throw IllegalStateException("Backend did not return created trait")
+    }
+
+    override suspend fun updateProfileTrait(
+        traitId: Int,
+        category: String,
+        content: String,
+        status: String
+    ): Result<BackendTraitItem> = runCatching {
+        val url = "${BuildConfig.BACKEND_BASE_URL}/api/profile/traits/$traitId"
+        val resp = apiService.updateProfileTrait(
+            url = url,
+            request = BackendTraitMutationRequest(
+                category = category,
+                content = content,
+                status = status
+            )
+        )
+        resp.trait ?: throw IllegalStateException("Backend did not return updated trait")
+    }
+
+    override suspend fun deleteProfileTrait(traitId: Int): Result<Unit> = runCatching {
+        val url = "${BuildConfig.BACKEND_BASE_URL}/api/profile/traits/$traitId"
+        apiService.deleteProfileTrait(url)
+        Unit
+    }
+
+    override suspend fun getAntiFatiguePlan(): Result<BackendAntiFatiguePlan?> = runCatching {
+        val url = "${BuildConfig.BACKEND_BASE_URL}/api/plan"
+        apiService.getAntiFatiguePlan(url).plan
+    }
+
+    override suspend fun deleteAntiFatiguePlan(): Result<Unit> = runCatching {
+        val url = "${BuildConfig.BACKEND_BASE_URL}/api/plan"
+        apiService.deleteAntiFatiguePlan(url)
+        Unit
+    }
+
     private suspend fun loadTodayContext(): ChatRequestContext {
+        val weeklyResult = usageRepository.loadWeeklyFatigueData()
+        val weeklyList = if (weeklyResult is UsageDataResult.Success) weeklyResult.data else emptyList()
+
         return when (val result = usageRepository.loadDailyFatigueData(today())) {
             is UsageDataResult.Success -> {
                 val note = when (result.origin) {
-                    UsageDataOrigin.REAL_DEVICE -> "This reply will use today's real device activity."
+                    UsageDataOrigin.REAL_DEVICE -> "This reply will use real device activity."
                 }
                 ChatRequestContext(
                     summary = buildUsageSummary(result.data),
                     note = note,
-                    usesUsageContext = true
+                    usesUsageContext = true,
+                    weeklyUsageList = weeklyList
                 )
             }
 
@@ -144,7 +211,8 @@ class ChatRepositoryImpl @Inject constructor(
             UsageDataResult.EmptyData -> {
                 ChatRequestContext(
                     note = "Today's device activity is unavailable, so replies will use general wellness guidance.",
-                    usesUsageContext = false
+                    usesUsageContext = false,
+                    weeklyUsageList = emptyList()
                 )
             }
         }
